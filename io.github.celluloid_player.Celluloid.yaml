@@ -1,7 +1,7 @@
 app-id: io.github.celluloid_player.Celluloid
-runtime: org.gnome.Platform
-runtime-version: '45'
-sdk: org.gnome.Sdk
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
 command: celluloid
 finish-args:
   - --share=ipc
@@ -17,9 +17,57 @@ finish-args:
   - --talk-name=org.gtk.vfs.*
   - --talk-name=org.gnome.SettingsDaemon.MediaKeys
   - --env=LC_NUMERIC=C
+
+inherit-extensions:
+ - org.freedesktop.Platform.GL.Debug
+
 modules:
+  - name: libsass
+    sources:
+    - type: git
+      url: https://github.com/sass/libsass.git
+      tag: 3.6.5
+    - type: script
+      dest-filename: autogen.sh
+      commands:
+        - autoreconf -si
+
+  - name: sassc
+    sources:
+    - type: git
+      url: https://github.com/sass/sassc.git
+      tag: 3.6.2
+    - type: script
+      dest-filename: autogen.sh
+      commands:
+        - autoreconf -si
+
+  - name: gtk4
+    buildsystem: meson
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/gtk.git
+        tag: 4.13.2
+
+  - name: libadwaita
+    buildsystem: meson
+    config-opts:
+      - --buildtype=release
+      - -Dgtk_doc=false
+      - -Dvapi=false
+      - -Dtests=false
+      - -Dexamples=false
+      - -Dintrospection=disabled
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/libadwaita.git
+        tag: '1.4.0'
+
   - name: celluloid
     buildsystem: meson
+    build-options:
+      strip: false
+      no-debuginfo: true
     config-opts:
       - --buildtype=release
     cleanup:
@@ -43,6 +91,9 @@ modules:
     modules:
 
       - name: libmpv
+        build-options:
+          strip: false
+          no-debuginfo: true
         cleanup:
           - /include
           - /lib/pkgconfig
@@ -171,6 +222,9 @@ modules:
                     sha256: e8ef71236ac0d97f12d553ec1ffc5b6375d57b5f0b860c7447dd69b6ed1072db
 
           - name: ffmpeg
+            build-options:
+              strip: false
+              no-debuginfo: true
             cleanup:
               - /include
               - /lib/pkgconfig
@@ -323,3 +377,13 @@ modules:
         x-checker-data:
           type: git
           tag-pattern: ^([\d.]+)$
+
+  - name: bootstrap
+    buildsystem: simple
+    build-commands:
+      - |
+        set -e
+        mkdir -p /app/lib/debug/usr
+        mkdir -p /app/lib/debug/usr/lib
+        mkdir -p /app/lib/debug/usr/lib/x86_64-linux-gnu
+        mkdir -p /app/lib/debug/usr/lib/x86_64-linux-gnu/GL
